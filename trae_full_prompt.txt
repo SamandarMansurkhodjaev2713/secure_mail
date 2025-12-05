@@ -1,0 +1,193 @@
+
+Проект: Полное техническое задание и инструкция для Trae — реализация веб-приложения для обмена сообщениями (письма) с прикреплениями, аккаунтами и UI.
+
+ВАЖНО: Trae должен сначала прочитать прикреплённые заказчиком два файла ТЗ (они будут доступны в рабочем контексте Trae под названиями SecureMail_Sandbox_TZ_v1 (копия).docx и Untitled document.docx ). После прочтения этих файлов — объединить их требования, разрешить конфликты (консервативно, предпочтение безопасности и UX), и затем реализовать проект полностью «под ключ», соблюдая нижеописанные требования и допуски.
+
+1) Цель задачи (кратко)
+- Сделать рабочее, безопасное, оптимизированное, хорошо структурированное и документированное веб-приложение «почта/мессенджер», где два тестовых аккаунта могут отправлять друг другу сообщения, прикреплять файлы и фото. Интерфейс должен выглядеть как письмо (список писем + открываемое письмо), с полноценной страницей входа (включая кнопку «пропустить», ведущую на главную страницу), верхним бургер-меню, удобной навигацией и отзывчивым дизайном. Код должен быть компонентным, названия компонентов и переменных — релевантны и понятны.
+
+2) Технический стек (рекомендация, реализовать ровно этот стек)
+- Frontend: React 18 + Vite, TypeScript, Tailwind CSS, React Router v6, Zustand (или Redux toolkit) для минимального состояния, react-hook-form для форм, axios для запросов.
+- Backend: Node.js (18+) + Express, TypeScript, SQLite (через Prisma ORM) — лёгкая, переносимая БД, либо Postgres если требуется продвинутая среда. Prisma облегчит схему и миграции.
+- Аутентификация: JWT (access + refresh) + bcrypt для хеширования паролей.
+- Файловое хранилище: локально в /uploads для тестовой реализации; код должен быть готов к замене на S3 (абстракция storage service).
+- Файловая загрузка: multer (Express), с валидацией типов (images: jpg/png/webp; documents: pdf/docx/zip), лимитом размера (например 10 MB).
+- Безопасность: helmet, express-rate-limit, xss-clean, express-mongo-sanitize (или аналог фильтрации). CORS настроен строго под домены. Входные данные валидируются (zod или yup).
+- Тесты: базовые unit/integration тесты (Jest + Supertest) для ключевых API: auth, sendMessage, getMessages, upload.
+- Dev tooling: ESLint, Prettier, Tailwind config, Husky pre-commit.
+- Docker: Dockerfile для backend и frontend + docker-compose для локального запуска (опционально, но желателен).
+
+3) Функциональные требования
+- Пользовательский интерфейс:
+  - Страница входа (email/login + password) и кнопка «Пропустить» (Skip) ведущая на главную страницу в гостевом режиме (ограниченный функционал).
+  - Логин/регистрация (регистрация может быть отключена — для теста предусмотреть два предсозданных аккаунта).
+  - Верхняя панель с рабочим бургер-меню (реализовать как компонент <BurgerMenu />). Меню должно открываться/закрываться и содержать: Профиль, Сообщения, Настройки, Выйти.
+  - Главная страница — список переписки (в виде писем) с поиском и сортировкой (по дате, по отправителю). Каждое сообщение отображает мини-превью и время.
+  - Экран просмотра письма: заголовок, отправитель, дата, тело сообщения, вложения (клики на вложения скачивают/открывают).
+  - Компонент создания/ответа на письмо: поле темы, тело (rich text optional — хотя можно textarea), возможность прикрепить несколько файлов (drag & drop), кнопка Отправить.
+  - Возможность открывать/закрывать письма; UI похож на почтовый клиент (подобно Gmail - но прост).
+  - Настройки аккаунта: смена пароля (включая валидацию), выход.
+  - Поддержка переключения между предсозданными аккаунтами (в рамках входа/выхода).
+- Аккаунты (преднастроенные):
+  - Sam4k / 1234 (email: sam@example.test)
+  - artur / 1234 (email: artur@example.test)
+  - Эти пользователи должны быть автоматически загружены в БД при initial seed/migration.
+- Работа сообщений:
+  - Реализовать отправку сообщений между пользователями (sender, recipient, subject, body, attachments[]).
+  - Сообщение должно сохраняться с метаданными: createdAt, readAt (nullable), attachments metadata (filename, mime, size, url).
+  - Возможность отправлять файлы и картинки; при отправке картинок — показывать превью в теле сообщения и список вложений.
+  - Сообщения можно пометить как прочитанные, удалить (не обязательно физически — можно мягкое удаление).
+- Безопасность и валидация:
+  - Пароли хранятся в bcrypt.
+  - JWT access token — срок истечения короткий; refresh token с возможностью обновления.
+  - Все формы валидируются как на frontend, так и на backend.
+  - Ограничение на типы загружаемых файлов и их размер.
+  - Защита от CSRF/XSS/инъекций.
+  - Логирование ошибок (winston или pino) и централизованная обработка ошибок.
+- Производительность:
+  - Lazy load сообщений, pagination / infinite scroll.
+  - Минимизация запросов (batching where reasonable).
+  - Static asset caching headers.
+
+4) Архитектура кода и правила именования
+- Frontend:
+  - src/
+    - components/ (каждый компонент отдельной папкой: index.tsx, styles.module.css или tailwind classes)
+      - Auth/
+      - Layout/
+      - BurgerMenu/
+      - MessageList/
+      - MessageItem/
+      - MessageView/
+      - Composer/
+      - FileUploader/
+      - Avatar/
+    - pages/
+      - LoginPage.tsx
+      - MainPage.tsx
+      - MessagePage.tsx
+      - SettingsPage.tsx
+    - hooks/
+    - services/ (api wrappers axios)
+    - store/
+    - types/
+    - utils/
+  - Имена компонентов в PascalCase. Переменные в camelCase. Файлы .tsx для компонентов, .ts для утилит.
+- Backend:
+  - src/
+    - controllers/
+    - routes/
+    - services/
+    - middlewares/
+    - prisma/ (schema.prisma)
+    - utils/
+    - tests/
+  - REST API endpoints (пример):
+    - POST /api/auth/login
+    - POST /api/auth/refresh
+    - POST /api/auth/logout
+    - GET /api/users/me
+    - GET /api/messages?limit=&page=&q=
+    - GET /api/messages/:id
+    - POST /api/messages (multipart/form-data with attachments)
+    - GET /api/attachments/:id or /uploads/:filename
+  - Документация API в README и OpenAPI (opinionated: добавьте swagger.json или краткое описание).
+
+5) Seed / тестовые данные
+- Seed-скрипт должен создать два пользователя (Sam4k и artur) с указанными логинами/паролями и почтами, а также 3–5 сообщений между ними (с вложениями: 1 image, 1 pdf).
+- README должен содержать инструкции, как запустить seed.
+
+6) README файлы (обязательно два текстовых файла)
+- readmeArtur.md — для заказчика (Artur). Должен быть написан простым, понятным языком, подробно описывать:
+  - Что реализовано (фича-лист)
+  - Как пользоваться (шаги: запуск, логин, отправка сообщений, прикрепление файлов)
+  - Какие технологии использованы (коротко)
+  - Что включено в поставку (docker-compose, SQL dump, seed script)
+  - Гарантии безопасности (короткий абзац)
+  - Как тестировать (приёмочные тесты)
+  - Контакты и примечания по расширению
+- readmeSam.md — для программиста (Sam). Должен быть максимально техническим, подробным:
+  - Структура проекта (файловая структура)
+  - Подробности по каждой важной компоненте/модулю и почему так спроектировано
+  - Инструкции по локальной разработке (установка, env переменные, запуск backend/frontend, seed, миграции)
+  - Конфигурация деплоймента (Docker, переменные окружения, рекомендации по S3/DB)
+  - Безопасность (детализировать JWT lifetimes, refresh rotation, разрешённые mime types, rate-limits)
+  - Тесты и как запускать (jest, supertest)
+  - Как расширять (напр. подключение real-time через WebSocket/Socket.IO)
+  - Список TODO/KNOWN ISSUES и рекомендации по рефакторингу
+- Оба README должны быть подробны и читабельны; readmeArtur ориентирован на non-technical заказчика, readmeSam — на dev.
+
+7) Acceptance criteria (чёткие)
+- Приложение запускается локально с командой: `docker-compose up --build` или отдельными командами `pnpm install && pnpm dev` (frontend) и `pnpm install && pnpm start:dev` (backend).
+- Можно зайти под Sam4k и artur (логин и email тестовые), отправить сообщение, получить сообщение, прикрепить файл, открыть вложение.
+- Кнопка «Пропустить» на странице логина переводит в гостевой режим (просмотр сообщений возможно ограничен).
+- Бургер-меню работает и ведёт к страницам.
+- Readme файлы присутствуют и детализированы.
+- Seed создаёт тестовые данные.
+- Логику аутентификации можно проверить через curl/postman.
+- Минимальные тесты проходят (npm test -> green).
+
+8) UX / дизайн / Accessibility
+- Делать простой, минималистичный и современный дизайн. Использовать Tailwind + доступные шрифты (Inter).
+- Контрастность текста >= WCAG AA.
+- Кнопки и элементы интерактивны с aria-атрибутами (например aria-expanded на бургер меню).
+- Мобильная версия: меню в виде бургер-меню; список писем с карточками.
+- Интерактивные элементы должны быть плавными (не блокировать основной поток).
+
+9) Безопасность и конфиденциальность (требования)
+- Не хранить пароли в plaintext. Использовать bcrypt (minRounds = 12).
+- Скрывать stack traces на проде; показывать user-friendly errors.
+- Файлы хранить с уникальными именами (UUID) и директориями по пользователю.
+- Не позволять исполнение загруженных файлов как скриптов (serve files with proper headers, Content-Disposition).
+- Ограничить количество запросов к auth endpoints.
+- Включить CSP (Content Security Policy) заголовок.
+
+10) CI / CD (рекомендации)
+- Настроить GitHub Actions: тесты + linting + build.
+- Автоматические миграции в окружении staging.
+
+11) Дополнительные рекомендации по реализации (чек-лист для Trae)
+- Компонентный подход + ясные prop-types/TS interfaces.
+- Хорошая документация к API (пример запросов в README).
+- Логи ошибок и аналитика (Sentry опционально).
+- Покрытие тестами критических путей (auth, sendMessage, upload).
+- Настроить environment variables через .env.example.
+- Примеры команд: `npm run dev`, `npm run start`, `npm run seed`, `npm run test`.
+- Все конфигурации (port, jwt secret, db url) вынести в env.
+- Обязательно включить инструкцию по переключению на S3 (замена storage adapter) и миграции на Postgres.
+
+12) Формат поставки
+- Git репозиторий с двумя папками: frontend/ backend/
+- Dockerfile в каждой папке и docker-compose.yml в корне.
+- seed файл: prisma/seed.ts или SQL dump.
+- README файлы в корне и в каждой папке (frontend/README.md backend/README.md).
+- Postman collection или curl примеры.
+- Минимум 1 тестовый отчёт (jest results).
+
+13) Примеры API (конкретные payloads)
+- POST /api/auth/login
+  - body: { "login":"Sam4k", "password":"1234" } or { "email":"sam@example.test", "password":"1234" }
+  - response: { accessToken, refreshToken, user: { id, name, email } }
+- POST /api/messages
+  - multipart/form-data:
+    - to: userId or email
+    - subject: string
+    - body: string (markdown allowed)
+    - attachments: file[]
+  - response: created message JSON with attachments metadata.
+- GET /api/messages?folder=inbox&page=1&limit=20
+
+14) Acceptance tests (пример)
+- CURL: login as Sam4k, send message to artur, login as artur, fetch messages, ensure message present and attachment url reachable.
+
+15) Таймлайны и приоритеты (для Trae)
+- MVP (обязательное): auth, two accounts, message send/receive, file upload, inbox view, message view, readme files, seed.
+- Beta (по желанию): rich-text, real-time notifications (Socket.IO), deployment scripts.
+- Дополнительно: internationalization (i18n).
+
+16) Комментарии по интеграции с Trae
+- Trae: прочитайте обе прикреплённые ТЗ-файла полностью и примените их требования поверх данного объединённого промпта — если есть конфликты — уведомите владельца (Artur) в выдаче PR с пунктами, где требуются решения. В PR приложите список изменений и причину принятого решения.
+- Создайте pull request в репозиторий (или архив) с описанием: что сделано, как запустить, какие тесты включены, Known limitations.
+- Добавьте инструкции для заказчика, как получить доступ (логины выше), и как поменять пароли.
+
+--- КОНЕЦ ПРОМПТА ---
