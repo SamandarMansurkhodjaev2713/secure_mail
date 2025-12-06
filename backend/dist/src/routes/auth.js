@@ -9,19 +9,32 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = require("jsonwebtoken");
 const config_1 = require("../config");
 const zod_1 = require("zod");
+const auth_1 = require("../middlewares/auth");
+const otplib_1 = require("otplib");
 const router = (0, express_1.Router)();
 router.post('/login', async (req, res) => {
-    const schema = zod_1.z.object({ login: zod_1.z.string().optional(), email: zod_1.z.string().email().optional(), password: zod_1.z.string() });
+    const schema = zod_1.z.object({
+        login: zod_1.z.string().optional(),
+        email: zod_1.z.string().email().optional(),
+        password: zod_1.z.string().min(4),
+        otp: zod_1.z.string().min(6).max(6).optional()
+    });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success)
         return res.status(400).json({ error: 'Invalid payload' });
-    const { login, email, password } = parsed.data;
-    const user = await prisma_1.prisma.user.findFirst({ where: { OR: [{ login }, { email }] } });
+    const user = await prisma_1.prisma.user.findFirst({ where: { OR: [{ login: parsed.data.login }, { email: parsed.data.email }] } });
     if (!user)
         return res.status(401).json({ error: 'Invalid credentials' });
-    const ok = await bcrypt_1.default.compare(password, user.passwordHash);
+    const ok = await bcrypt_1.default.compare(parsed.data.password, user.passwordHash);
     if (!ok)
         return res.status(401).json({ error: 'Invalid credentials' });
+    if (user.twoFASecret) {
+        if (!parsed.data.otp)
+            return res.status(401).json({ error: 'OTP required' });
+        const valid = otplib_1.authenticator.verify({ token: parsed.data.otp, secret: user.twoFASecret });
+        if (!valid)
+            return res.status(401).json({ error: 'Invalid OTP' });
+    }
     const accessToken = (0, jsonwebtoken_1.sign)({ userId: user.id }, config_1.config.jwtSecret, { expiresIn: config_1.config.jwtExpiresIn });
     const refreshToken = (0, jsonwebtoken_1.sign)({ userId: user.id }, config_1.config.refreshSecret, { expiresIn: config_1.config.refreshExpiresIn });
     res.json({ accessToken, refreshToken, user: { id: user.id, login: user.login, email: user.email, name: user.name, role: user.role } });
@@ -94,5 +107,30 @@ router.post('/register', async (req, res) => {
     const finalRole = requesterRole === 'ADMIN' && role === 'ADMIN' ? 'ADMIN' : (role === 'USER' ? 'USER' : 'USER');
     const user = await prisma_1.prisma.user.create({ data: { login, email, name, passwordHash: hash, role: finalRole } });
     res.status(201).json({ id: user.id, login: user.login, email: user.email, name: user.name, role: user.role });
+});
+router.post('/2fa/setup', auth_1.requireAuth, async (req, res) => {
+    const userId = req.userId;
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
+    if (!user)
+        return res.status(401).json({ error: 'Unauthorized' });
+    const secret = otplib_1.authenticator.generateSecret();
+    const otpAuth = otplib_1.authenticator.keyuri(user.email, 'SecureMail', secret);
+    await prisma_1.prisma.user.update({ where: { id: userId }, data: { twoFATempSecret: secret } });
+    res.json({ secret, otpAuth });
+});
+router.post('/2fa/verify', auth_1.requireAuth, async (req, res) => {
+    const schema = zod_1.z.object({ token: zod_1.z.string().min(6).max(6) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success)
+        return res.status(400).json({ error: 'Invalid payload' });
+    const userId = req.userId;
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.twoFATempSecret)
+        return res.status(400).json({ error: 'Setup not started' });
+    const ok = otplib_1.authenticator.verify({ token: parsed.data.token, secret: user.twoFATempSecret });
+    if (!ok)
+        return res.status(401).json({ error: 'Invalid token' });
+    await prisma_1.prisma.user.update({ where: { id: userId }, data: { twoFASecret: user.twoFATempSecret, twoFATempSecret: null } });
+    res.json({ enabled: true });
 });
 exports.default = router;

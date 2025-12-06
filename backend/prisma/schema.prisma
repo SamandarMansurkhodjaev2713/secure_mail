@@ -15,6 +15,7 @@ model User {
   passwordHash String
   role         String   @default("USER")
   twoFASecret  String?
+  twoFATempSecret String?
   dailyQuota   Int      @default(5)
   messagesSent Message[] @relation("messagesSent")
   messagesRecv Message[] @relation("messagesRecv")

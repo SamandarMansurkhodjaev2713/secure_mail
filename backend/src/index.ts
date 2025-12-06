@@ -8,6 +8,7 @@ import authRoutes from './routes/auth'
 import messageRoutes from './routes/messages'
 import usersRoutes from './routes/users'
 import sandboxRoutes from './routes/sandbox'
+import imapRoutes from './routes/imap'
 
 const app = express()
 
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/sandbox', sandboxRoutes)
+app.use('/api/imap', imapRoutes)
 
 process.on('unhandledRejection', (err) => { console.error('unhandledRejection', err) })
 process.on('uncaughtException', (err) => { console.error('uncaughtException', err) })
