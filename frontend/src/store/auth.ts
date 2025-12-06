@@ -6,7 +6,7 @@ type AuthState = {
   user: User | null
   accessToken: string | null
   refreshToken: string | null
-  login: (data: { login?: string; email?: string; password: string }) => Promise<void>
+  login: (data: { login?: string; email?: string; password: string; otp?: string }) => Promise<void>
   logout: () => Promise<void>
   skip: () => void
 }
