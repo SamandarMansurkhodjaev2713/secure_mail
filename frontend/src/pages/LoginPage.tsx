@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form'
 import { useAuth } from '../store/auth'
 import { useNavigate } from 'react-router-dom'
 
-type FormValues = { login?: string; email?: string; password: string }
+type FormValues = { login?: string; email?: string; password: string; otp?: string }
 
 export default function LoginPage() {
-  const { register, handleSubmit } = useForm<FormValues>()
+  const { register, handleSubmit, setValue } = useForm<FormValues>()
   const auth = useAuth()
   const navigate = useNavigate()
   const onSubmit = async (v: FormValues) => { await auth.login(v) }
@@ -19,11 +19,12 @@ export default function LoginPage() {
           <input {...register('login')} className="input" placeholder="Логин" />
           <input {...register('email')} className="input" placeholder="Email" />
           <input {...register('password', { required: true })} type="password" className="input" placeholder="Пароль" />
+          <input {...register('otp')} className="input" placeholder="OTP (если включен 2FA)" />
           <button type="submit" className="btn-primary">Войти</button>
         </form>
         <div className="mt-4 grid gap-2">
-          <button onClick={async () => { await auth.login({ login: 'Sam4k', password: '1234' }) }} className="btn-secondary">Войти как Sam4k</button>
-          <button onClick={async () => { await auth.login({ login: 'artur', password: '1234' }) }} className="btn-secondary">Войти как artur</button>
+          <button onClick={() => { setValue('login', 'Sam4k'); setValue('email', ''); setValue('password', '1234') }} className="btn-secondary">Войти как Sam4k</button>
+          <button onClick={() => { setValue('login', 'artur'); setValue('email', ''); setValue('password', '1234') }} className="btn-secondary">Войти как artur</button>
           <button onClick={() => { auth.skip(); navigate('/') }} className="btn-secondary">Пропустить</button>
         </div>
       </div>
