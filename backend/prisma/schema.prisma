@@ -14,8 +14,11 @@ model User {
   name         String
   passwordHash String
   role         String   @default("USER")
+  twoFASecret  String?
+  dailyQuota   Int      @default(5)
   messagesSent Message[] @relation("messagesSent")
   messagesRecv Message[] @relation("messagesRecv")
+  sandboxSessions SandboxSession[]
 }
 
 model Message {
@@ -39,4 +42,19 @@ model Attachment {
   size        Int
   messageId   String
   message     Message  @relation(fields: [messageId], references: [id])
+  sandboxSessions SandboxSession[]
+}
+
+model SandboxSession {
+  id           String   @id @default(cuid())
+  userId       String
+  attachmentId String
+  status       String
+  resultType   String
+  previewPath  String?
+  reportPath   String?
+  createdAt    DateTime @default(now())
+  durationMs   Int
+  user         User     @relation(fields: [userId], references: [id])
+  attachment   Attachment @relation(fields: [attachmentId], references: [id])
 }

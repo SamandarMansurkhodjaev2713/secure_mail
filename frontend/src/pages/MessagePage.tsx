@@ -6,6 +6,7 @@ import type { Message } from '../types/models'
 import { getAttachment, putAttachment } from '../utils/idb'
 
 export default function MessagePage() {
+  const [preview, setPreview] = useState<{ type: 'image' | 'html' | 'text'; url: string; report?: string } | null>(null)
   const { id } = useParams()
   const [msg, setMsg] = useState<Message | null>(null)
   useEffect(() => { if (id) api.get(`/messages/${id}`).then(r => setMsg(r.data)) }, [id])
@@ -41,7 +42,22 @@ export default function MessagePage() {
                   {a.filename}
                 </a>
               ))}
+              {msg.attachments.map(a => (
+                <button key={a.id} className="ml-2 btn-secondary" onClick={async () => {
+                  const r = await api.post(`/sandbox/open/${a.id}`)
+                  setPreview({ type: r.data.resultType, url: r.data.previewPath, report: r.data.reportPath })
+                }}>Просмотреть безопасно</button>
+              ))}
             </div>
+          </div>
+        )}
+        {preview && (
+          <div className="mt-4 card p-4">
+            <div className="heading font-semibold mb-2">Безопасное превью</div>
+            {preview.type === 'image' && <img src={preview.url} alt="preview" className="max-w-full" />}
+            {preview.type === 'html' && <iframe src={preview.url} className="w-full h-96 bg-white" />}
+            {preview.type === 'text' && <iframe src={preview.url} className="w-full h-64 bg-white" />}
+            {preview.report && <a href={preview.report} className="text-emerald-300 mt-2 inline-block">Отчет</a>}
           </div>
         )}
       </div>

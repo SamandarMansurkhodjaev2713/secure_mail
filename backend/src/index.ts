@@ -7,6 +7,7 @@ import { config } from './config'
 import authRoutes from './routes/auth'
 import messageRoutes from './routes/messages'
 import usersRoutes from './routes/users'
+import sandboxRoutes from './routes/sandbox'
 
 const app = express()
 
@@ -19,6 +20,7 @@ app.use('/uploads', express.static(path.resolve(config.uploadDir)))
 app.use('/api/auth', authRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/users', usersRoutes)
+app.use('/api/sandbox', sandboxRoutes)
 
 process.on('unhandledRejection', (err) => { console.error('unhandledRejection', err) })
 process.on('uncaughtException', (err) => { console.error('uncaughtException', err) })
