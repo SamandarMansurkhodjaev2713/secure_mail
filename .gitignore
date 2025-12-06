@@ -1,0 +1,25 @@
+# Node
+frontend/node_modules/
+backend/node_modules/
+frontend/dist/
+backend/dist/
+
+# Env and secrets
+backend/.env
+.env
+
+# Uploads and generated data
+backend/uploads/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
