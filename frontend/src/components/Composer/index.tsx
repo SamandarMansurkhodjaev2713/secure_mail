@@ -22,12 +22,12 @@ export default function Composer() {
     reset()
   }
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="p-4 grid gap-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="p-4 grid gap-3 animate-fade-in">
       <input {...register('to', { required: true })} className="input" placeholder="Получатель (login/email)" />
       <input {...register('subject', { required: true })} className="input" placeholder="Тема" />
       <textarea {...register('body', { required: true })} className="input h-32" placeholder="Сообщение" />
       <input type="file" multiple {...register('files')} className="text-white" />
-      <button type="submit" disabled={!authed} className="btn-primary disabled:bg-dark-600 disabled:cursor-not-allowed">Отправить</button>
+      <button type="submit" disabled={!authed} className="btn-primary disabled:bg-dark-600 disabled:cursor-not-allowed animate-glow">Отправить</button>
       {!authed && <div className="text-dark-300 text-sm">Для отправки войдите в систему.</div>}
     </form>
   )

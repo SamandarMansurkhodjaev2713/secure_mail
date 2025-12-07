@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../store/auth'
 import { useNavigate } from 'react-router-dom'
@@ -6,10 +6,20 @@ import { useNavigate } from 'react-router-dom'
 type FormValues = { login?: string; email?: string; password: string; otp?: string }
 
 export default function LoginPage() {
-  const { register, handleSubmit, setValue } = useForm<FormValues>()
+  const { register, handleSubmit, setValue, setFocus } = useForm<FormValues>()
   const auth = useAuth()
   const navigate = useNavigate()
-  const onSubmit = async (v: FormValues) => { await auth.login(v) }
+  const [error, setError] = useState<string | null>(null)
+  const onSubmit = async (v: FormValues) => {
+    setError(null)
+    try {
+      await auth.login(v)
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.message || 'Ошибка входа'
+      setError(msg)
+      if (msg.includes('OTP')) setFocus('otp')
+    }
+  }
   useEffect(() => { if (auth.user) navigate('/') }, [auth.user, navigate])
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-gray-900 to-gray-800">
@@ -22,9 +32,10 @@ export default function LoginPage() {
           <input {...register('otp')} className="input" placeholder="OTP (если включен 2FA)" />
           <button type="submit" className="btn-primary">Войти</button>
         </form>
+        {error && <div className="mt-2 text-sm text-red-400">{error}</div>}
         <div className="mt-4 grid gap-2">
-          <button onClick={() => { setValue('login', 'Sam4k'); setValue('email', ''); setValue('password', '1234') }} className="btn-secondary">Войти как Sam4k</button>
-          <button onClick={() => { setValue('login', 'artur'); setValue('email', ''); setValue('password', '1234') }} className="btn-secondary">Войти как artur</button>
+          <button onClick={async () => { setError(null); setValue('login', 'Sam4k'); setValue('email', ''); setValue('password', '1234'); try { await auth.login({ login: 'Sam4k', password: '1234' }) } catch (e: any) { const msg = e?.response?.data?.error || e?.message || 'Ошибка входа'; setError(msg); if (msg.includes('OTP')) setFocus('otp') } }} className="btn-secondary">Войти как Sam4k</button>
+          <button onClick={async () => { setError(null); setValue('login', 'artur'); setValue('email', ''); setValue('password', '1234'); try { await auth.login({ login: 'artur', password: '1234' }) } catch (e: any) { const msg = e?.response?.data?.error || e?.message || 'Ошибка входа'; setError(msg); } }} className="btn-secondary">Войти как artur</button>
           <button onClick={() => { auth.skip(); navigate('/') }} className="btn-secondary">Пропустить</button>
         </div>
       </div>

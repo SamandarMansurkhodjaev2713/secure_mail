@@ -16,11 +16,18 @@ export const useAuth = create<AuthState>((set) => ({
   accessToken: null,
   refreshToken: null,
   async login(data) {
-    const res = await axios.post('/api/auth/login', data)
-    set({ user: res.data.user, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken })
-    localStorage.setItem('sm_user', JSON.stringify(res.data.user))
-    localStorage.setItem('sm_access', res.data.accessToken)
-    localStorage.setItem('sm_refresh', res.data.refreshToken)
+    const payload: any = { ...data }
+    Object.keys(payload).forEach((k) => { if (payload[k] === '' || payload[k] === undefined) delete payload[k] })
+    try {
+      const res = await axios.post('/api/auth/login', payload)
+      set({ user: res.data.user, accessToken: res.data.accessToken, refreshToken: res.data.refreshToken })
+      localStorage.setItem('sm_user', JSON.stringify(res.data.user))
+      localStorage.setItem('sm_access', res.data.accessToken)
+      localStorage.setItem('sm_refresh', res.data.refreshToken)
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || (e?.code === 'ERR_NETWORK' ? 'Сервер недоступен' : e?.message || 'Ошибка входа')
+      throw new Error(msg)
+    }
   },
   async logout() {
     await axios.post('/api/auth/logout')
